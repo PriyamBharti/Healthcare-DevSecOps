@@ -1,0 +1,55 @@
+
+name: Healthcare DevSecOps CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-and-build:
+    name: Security Checks and Docker Build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies and security tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r app/requirements.txt
+          python -m pip install bandit pip-audit
+
+      - name: Check Python syntax
+        run: python -m compileall -q app
+
+      - name: Run Bandit SAST
+        run: bandit -r app -f txt
+
+      - name: Run pip-audit SCA
+        run: pip-audit -r app/requirements.txt
+
+      - name: Build Docker image
+        run: docker build -t healthcare-devsecops:${{ github.sha }} .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: healthcare-devsecops:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
