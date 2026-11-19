@@ -1,4 +1,4 @@
-﻿pipeline {
+pipeline {
     agent any
 
     options {
@@ -60,7 +60,6 @@
                     set -eu
 
                     for attempt in 1 2 3 4 5 6 7 8 9 10; do
-
                         if docker exec "$APP_CONTAINER" python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3).read().decode())"; then
                             exit 0
                         fi
